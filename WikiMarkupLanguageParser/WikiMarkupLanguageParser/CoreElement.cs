@@ -20,7 +20,7 @@ namespace WikiMarkupLanguageParser
             { "source", new string[]{"si"} },
             //->segment tags
             { "cs", new string[]{ "h", "pt"} },
-            { "s", new string[]{ "img", "h", "p", "bl","nl"} },
+            { "s", new string[]{ "s", "img", "h", "p", "bl","nl"} },
             { "bl", new string[]{ "li"} },
             { "nl", new string[]{ "li"} },
             //informational tags
@@ -59,6 +59,10 @@ namespace WikiMarkupLanguageParser
         }
         public static Element TagToNode(string tag, string data, Element parent, CoreElement coreElement)
         {
+            if(tagName.Match(tag).Value == "b")
+            {
+                //Console.WriteLine(data);
+            }
             if (tagWithOutParam.IsMatch(tag))
             {
                 return new Element(parent, coreElement, tagName.Match(tag).Value, null, data);
@@ -72,7 +76,7 @@ namespace WikiMarkupLanguageParser
             {
                 var name = tagName.Match(tag).Value;
                 var t = tag.Substring(1, tag.Length - 1).Replace(name, "").Split(" ");
-                return new Element(parent, coreElement, name, new string[] { t[1] }, data);
+                return new Element(parent, coreElement, name, t, data);
             }
             else
             {
@@ -88,15 +92,14 @@ namespace WikiMarkupLanguageParser
             {
                 return true;
             }
-            {
-                
-            }
             int i = 0;
             int tagStartIndex = 0;
             bool isTagName = false;
             int branchStartIndex = 0;
             bool isBranch = false;
             string branchRootTag = "";
+            bool isText = false;
+            int textIndex = 0;
             int line = 1;
             int chr = 1;
             while (true)
@@ -107,8 +110,28 @@ namespace WikiMarkupLanguageParser
                 }
                 if (data[i] == '[')
                 {
+                    if (isText)
+                    {
+                        elements.Add(new Element(parent, core, "text", null, data.Substring(textIndex, i - textIndex)) { isProcessed = true });
+                        isText = false;
+                    }
                     isTagName = true;
                     tagStartIndex = i;
+                }
+                if (i == data.Length - 1)
+                {
+                    if (isText)
+                    {
+                        elements.Add(new Element(parent, core, "text", null, data.Substring(textIndex, i - textIndex + 1)){isProcessed = true});
+                    }
+                }
+                else
+                {
+                    if (!isText && !isTagName && !isBranch && !new Regex(@"\s").IsMatch("" + data[i]))
+                    {
+                        isText = true;
+                        textIndex = i;
+                    }
                 }
                 if (data[i] == '\n')
                 {
@@ -122,20 +145,20 @@ namespace WikiMarkupLanguageParser
                         throw new Exception();
                     }
                     string temp = data.Substring(tagStartIndex + 1, i - tagStartIndex - 1);
-                    if(temp[0] == '/')
+                    if (temp[0] == '/')
                     {
                         var t = elem.Pop();
                         if (tagName.Match(t).Value != tagName.Match(temp).Value)
                         {
                             throw new Exception($"{temp} {t} {line} {chr}");
                         }
-                        if(elem.Count == 0)
+                        if (elem.Count == 0)
                         {
                             var rowBranchData = data.Substring(branchStartIndex, i - branchStartIndex + 1);
                             int j = 0;
                             while (rowBranchData[j] != ']' || j > rowBranchData.Length - 1) j++;
-                            var tag = rowBranchData.Substring(0,j + 1);
-                            string[] param; 
+                            var tag = rowBranchData.Substring(0, j + 1);
+                            string[] param;
                             rowBranchData = rowBranchData.Substring(j + 1, rowBranchData.Length - (branchRootTag.Length + tagName.Match(branchRootTag).Value.Length + 5)).Trim();
                             isBranch = false;
                             elements.Add(TagToNode("[" + tagName.Match(branchRootTag).Value + "]", rowBranchData, parent, core));
@@ -144,16 +167,32 @@ namespace WikiMarkupLanguageParser
                     else if (temp[temp.Length - 1] != '/')
                     {
                         elem.Push(temp);
-                        if(isBranch == false)
+                        if (isBranch == false)
                         {
+                            if (!ElementsAllowedTags[name].Contains(tagName.Match(temp).Value))
+                            {
+                                throw new Exception($"{temp} {name} {line} {chr}");
+                            }
                             branchStartIndex = tagStartIndex;
                             isBranch = true;
                             branchRootTag = temp;
                         }
                     }
-                    else if (!isBranch)
+                    else
                     {
-                        elements.Add(TagToNode("[" + temp + "]", string.Empty, parent, core));                        
+                        if (!singleTags.Contains(tagName.Match(temp).Value))
+                        {
+                            throw new Exception(temp);
+                        }
+
+                        if (!isBranch)
+                        {
+                            if (!ElementsAllowedTags[name].Contains(tagName.Match(temp).Value))
+                            {
+                                throw new Exception($"{tagName.Match(temp).Value} {name} {line} {chr}");
+                            }
+                            elements.Add(TagToNode("[" + temp + "]", string.Empty, parent, core));
+                        }
                     }
                     isTagName = false;
                 }
@@ -171,6 +210,7 @@ namespace WikiMarkupLanguageParser
             ProcessNode(node);
             foreach (var elem in node.Children)
             {
+                if(!elem.isProcessed)
                 ProcessTree(elem);
             }
         }
@@ -184,17 +224,6 @@ namespace WikiMarkupLanguageParser
         }
         public bool Process()
         {
-            if (Data[0] != '[')
-            {
-                throw new Exception();
-            }
-            int i = 0;
-            string temp = "";
-            string tagName = "";
-            bool isTagName = false;
-            int tegStartIndex = 0;
-
-            int tegCount = 0;
             ProcessNode(Data, "core", out var el, out var error, null, this);
             foreach(var e in el)
             {
