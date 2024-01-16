@@ -37,7 +37,14 @@ namespace WikiMarkupLanguageParser
             {
                 ts += "  ";
             }
-            return ts + Name;
+            string tt = "";
+            if(Param is not null)
+            {
+                tt = Param.Aggregate((a, x) => a + " "+x).Trim();
+            }
+            if (Name == "text")
+                tt +="\n" + ts + "  " + Content;
+            return ts + Name + " " + tt;
         }
     }
 }

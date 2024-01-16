@@ -1,15 +1,28 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-
+//TODO: params check
 namespace WikiMarkupLanguageParser
 {
     internal class CoreElement
     {
         public static List<string> singleTags = new List<string>() {"WiML","n","img","sl"};
+        public static List<string> notNullParam = new List<string>() {"pt"};
+        public static List<string> requireData = new List<string>() {"title", "card", "body", "source", "cs", "s", "bl", "nl", "l", "h", "d", "pt", "p", "li", "si", "b", "i"};
+        public static Dictionary<string, Dictionary<string, string>> requiredTagsCount = new Dictionary<string, Dictionary<string, string>>() // 1 - required and no more than 1; ? - no more than 1; + - required;
+        {
+            {"core", new Dictionary<string, string>() { {"WiML", "1"}, {"title", "1"}, { "card", "?" }, {"body", "1"}, {"source", "?"} } },
+            {"card", new Dictionary<string, string>() { { "img", "?"}, { "d", "?"}, } },
+            {"source", new Dictionary<string, string>() { { "si", "+"}, } },
+            {"cs", new Dictionary<string, string>() { { "h", "1"}, } },
+            {"s", new Dictionary<string, string>() { { "h", "1"}, } },
+            {"bl", new Dictionary<string, string>() { { "li", "+"}, } },
+            {"nl", new Dictionary<string, string>() { { "li", "+"}, } },
+        };
         public static Dictionary<string, string[]> ElementsAllowedTags = new Dictionary<string, string[]>() {
             { "core", new string[]{"WiML", "title", "card","body", "source" } },
             //structural tags
@@ -21,8 +34,8 @@ namespace WikiMarkupLanguageParser
             //->segment tags
             { "cs", new string[]{ "h", "pt"} },
             { "s", new string[]{ "s", "img", "h", "p", "bl","nl"} },
-            { "bl", new string[]{ "li"} },
-            { "nl", new string[]{ "li"} },
+            { "bl", new string[]{"li"} },
+            { "nl", new string[]{"li"} },
             //informational tags
             //->core tags
             { "title", new string[]{"b","i", "text"}},
@@ -46,7 +59,7 @@ namespace WikiMarkupLanguageParser
         public string title = "";
         public Element? Card;
         public Element Body;
-        public Element Source;
+        public Element? Source;
         public string Data;
         public bool isProcessed;
         public static Regex tagWithOutParam = new Regex(@"\[\w+\/?\]");
@@ -59,35 +72,59 @@ namespace WikiMarkupLanguageParser
         }
         public static Element TagToNode(string tag, string data, Element parent, CoreElement coreElement)
         {
-            if(tagName.Match(tag).Value == "b")
+            var name = tagName.Match(tag).Value;
+            if(name is "pt")
             {
-                //Console.WriteLine(data);
+                Console.WriteLine(tag);
             }
+            if (requireData.Contains(name) && string.IsNullOrEmpty(data))
+                throw new Exception($"{name} mast contains data");
+            Element elem;
             if (tagWithOutParam.IsMatch(tag))
             {
-                return new Element(parent, coreElement, tagName.Match(tag).Value, null, data);
+                elem = new Element(parent, coreElement, name, null, data);
             }
             else if (tagWithShortParam.IsMatch(tag))
             {
                 var t = tag.Substring(1, tag.Length - 1).Split('=');
-                return new Element(parent, coreElement, t[0], new string[] { t[1] }, data);
+                t[1]=t[1].Replace("]", "").Trim('/');
+                t[1] = t[1].Substring(0, t[1].Length);
+                elem = new Element(parent, coreElement, name, new string[] { t[1] }, data);
             }
             else if (tagWithParam.IsMatch(tag))
             {
-                var name = tagName.Match(tag).Value;
-                var t = tag.Substring(1, tag.Length - 1).Replace(name, "").Split(" ");
-                return new Element(parent, coreElement, name, t, data);
+                
+                var t = tag.Substring(1, tag.Length - 1).Replace(name, "").Replace("]","").Trim('/').Split(" ");
+                elem = new Element(parent, coreElement, name, t, data);
             }
             else
             {
                 throw new Exception(tag);
             }
+            if (notNullParam.Contains(name))
+            {
+                if (elem.Param is not null)
+                {
+                    foreach (var param in elem.Param)
+                    {
+                        Console.WriteLine(param);
+                        if (string.IsNullOrEmpty(param))
+                        {
+                            throw new Exception($"require not empty parameters {tag}");
+                        }
+                    }
+                }
+                else
+                {
+                    throw new Exception($"require not empty parameters, {elem.Param} {elem.Name}, {elem.Content}, {tag}");
+                }
+            }
+            return elem;
         }
-        public static bool ProcessNode(string data, string name, out List<Element> elements, out string error, Element? parent, CoreElement core)
+        public static bool ProcessNode(string data, string name, out List<Element> elements, Element? parent, CoreElement core)
         {
             Stack<string> elem = new Stack<string>();
             elements = new List<Element>();
-            error = string.Empty;
             if (data == string.Empty)
             {
                 return true;
@@ -106,13 +143,49 @@ namespace WikiMarkupLanguageParser
             {
                 if (i > data.Length - 1)
                 {
+                    if (ElementsAllowedTags[name].Contains("h"))
+                    {
+                        if(elements.Count(x => x.Name == "h") != 1)
+                        {
+                            throw new Exception($"{name} mast contains 1 h tag");
+                        }
+                    }
+                    if (requiredTagsCount.ContainsKey(name))
+                    {
+                        foreach(var rule in requiredTagsCount[name])
+                        {
+                            var count = elements.Count(x => x.Name == rule.Key);
+                            switch (rule.Value)
+                            {
+                                case "1":
+                                    if(count != 1)
+                                    {
+                                        throw new Exception($"only one {rule.Key} tag allowed in {name}");
+                                    }
+                                    break;
+                                case "?":
+                                    if(count > 1)
+                                    {
+                                        throw new Exception($"no more than one {rule.Key} tag allowed in {name}");
+                                    }
+                                    break;
+                                case "+":
+                                    if (count < 1)
+                                    {
+                                        throw new Exception($"requires at least one tag {rule.Key} in {name}");
+                                    }
+                                    break;
+                                default: throw new Exception($"there is no such rule as {rule.Value}");
+                            }
+                        }
+                    }
                     break;
                 }
                 if (data[i] == '[')
                 {
                     if (isText)
                     {
-                        elements.Add(new Element(parent, core, "text", null, data.Substring(textIndex, i - textIndex)) { isProcessed = true });
+                        elements.Add(new Element(parent, core, "text", null, Regex.Replace(data.Substring(textIndex, i - textIndex + 1), @"\s+", " ")) { isProcessed = true });
                         isText = false;
                     }
                     isTagName = true;
@@ -122,7 +195,7 @@ namespace WikiMarkupLanguageParser
                 {
                     if (isText)
                     {
-                        elements.Add(new Element(parent, core, "text", null, data.Substring(textIndex, i - textIndex + 1)){isProcessed = true});
+                        elements.Add(new Element(parent, core, "text", null, Regex.Replace(data.Substring(textIndex, i - textIndex + 1), @"\s+", " ")){isProcessed = true});
                     }
                 }
                 else
@@ -161,7 +234,7 @@ namespace WikiMarkupLanguageParser
                             string[] param;
                             rowBranchData = rowBranchData.Substring(j + 1, rowBranchData.Length - (branchRootTag.Length + tagName.Match(branchRootTag).Value.Length + 5)).Trim();
                             isBranch = false;
-                            elements.Add(TagToNode("[" + tagName.Match(branchRootTag).Value + "]", rowBranchData, parent, core));
+                            elements.Add(TagToNode(tag, rowBranchData, parent, core));
                         }
                     }
                     else if (temp[temp.Length - 1] != '/')
@@ -203,7 +276,7 @@ namespace WikiMarkupLanguageParser
         }
         public static bool ProcessNode(Element element)
         {
-            return ProcessNode(element.Content, element.Name, out element.Children, out var error, element, element.CoreElement);
+            return ProcessNode(element.Content, element.Name, out element.Children, element, element.CoreElement);
         }
         public static void ProcessTree(Element node)
         {
@@ -224,10 +297,22 @@ namespace WikiMarkupLanguageParser
         }
         public bool Process()
         {
-            ProcessNode(Data, "core", out var el, out var error, null, this);
-            foreach(var e in el)
+            ProcessNode(Data, "core", out var el, null, this);
+            title = el.First(x => x.Name == "title").Content;
+            Body = el.First(x => x.Name == "body");
+            Card = el.FirstOrDefault(x => x.Name == "card");
+            Source = el.FirstOrDefault(x => x.Name == "source");
+            if(Source is not null)
             {
-                ProcessTree(e);
+                ProcessTree(Source);
+            }
+            if(Card is not null)
+            {
+                ProcessTree(Card);
+            }
+            ProcessTree(Body);
+            foreach (var e in el)
+            {
                 PrintTree(e);
             }
             return true;
