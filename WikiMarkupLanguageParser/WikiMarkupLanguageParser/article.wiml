@@ -5,14 +5,14 @@
     [d]Test article for Wiki Markup Language[/d]
     [cs]
         [h]Section 1[/h]
-        [pt="property1"]value1[/pt]
+        [pt="property1"]value1[b]qwerty[/b][/pt]
         [pt="property2"]value2[/pt]
         [pt="property3"]value3[/pt]
         [pt="property4"]value4[/pt]
     [/cs]
     [cs]
         [h]Section 2[/h]
-        [pt="property1"]value1[n/][b]value2[/b][n/][i]value3[/i][/pt]
+        [pt="property1"]value1[n/][b]value2[n/][/b][n/][i]value3[n/][/i][/pt]
     [/cs]
     [cs]
         [h]Section 3[/h]
@@ -23,7 +23,7 @@
     [s]
         [h]Section1[/h]
         [p]
-        Lorem ipsum dolor sit, amet consectetur adipisicing elit. Incidunt facilis error maiores tenetur?
+        Lorem ipsum dolor[b] sit[/b], amet consectetur adipisicing elit. Incidunt facilis error maiores tenetur?
         Veritatis voluptatum aut culpa cupiditate, minus voluptate?
         [/p]
         [s]
@@ -59,7 +59,7 @@
     [s]
         [h]Section2[/h]
         [p]
-        Lorem ipsum dolor sit, amet consectetur adipisicing elit. Incidunt facilis error maiores tenetur?
+        Lorem ipsum dolor sit, [l="/"]amet[/l] consectetur adipisicing elit. Incidunt facilis error maiores tenetur?
         Veritatis voluptatum aut culpa cupiditate, minus voluptate?
         [/p]
     [/s]
