@@ -39,8 +39,12 @@ namespace WikiMarkupLanguageParser
                     html += "<img src=" + element.Param[0].Split("=", StringSplitOptions.RemoveEmptyEntries)[1];
                     if (element.Param.Length > 1)
                     {
-                        html += "alt=" + element.Param[1].Split("=")[1] + ">";
+                        html += "alt=" + element.Param[1].Split("=")[1] + "/>";
                         html += $"<div class=\"img-description\">{element.Param[1].Split("=", StringSplitOptions.RemoveEmptyEntries)[1].Trim('"')}</div>";
+                    }
+                    else
+                    {
+                        html += "/>";
                     }
                     break;
                 case "d":

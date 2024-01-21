@@ -88,8 +88,7 @@ namespace WikiMarkupLanguageParser
             }
             else if (tagWithParam.IsMatch(tag))
             {
-
-                var t = tag.Substring(1, tag.Length - 1).Replace(name, "").Replace("]", "").Trim('/').Split(" ", StringSplitOptions.RemoveEmptyEntries);
+                var t = tag.Substring(name.Length + 1, tag.Length - name.Length - 1).Replace("]", "").Trim('/').Split(" ", StringSplitOptions.RemoveEmptyEntries);
                 elem = new Element(parent, coreElement, name, t, data);
             }
             else

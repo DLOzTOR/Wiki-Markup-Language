@@ -77,9 +77,12 @@ class WiMLToHTML
             case "img":
                 $html .= "<img src=" .  split($element->Param[0],"=")[1];
                 if (count($element->Param) > 1) {
-                    
-                    $html .= "alt=" . split($element->Param[1], "=")[1] . ">";
+                    $html .= "alt=" . split($element->Param[1], "=")[1] . "/>";
                     $html .= '<div class=\"img-description\">' . trim(split($element->Param[1], "=")[1], '"') . '</div>';
+                }
+                else{
+                    $html .= "/>";
+                    $html .= " " . var_dump($element->Param);
                 }
                 break;
             case "d":
@@ -201,9 +204,7 @@ class CoreElement
             $t[1] = rtrim($t[1], "]");
             $elem = new Element($parent, $coreElement, $name, [$t[1]], $data);
         } elseif (preg_match(self::$tagWithParam, $tag)) {
-            $t = explode(" ", substr($tag, 1, -1));
-            array_shift($t);
-            array_pop($t);
+            $t = split(trim(str_replace("]","", substr($tag, strlen($name) + 1, -1)), '/')," ");
             $elem = new Element($parent, $coreElement, $name, $t, $data);
         } else {
             throw new Exception($tag);
