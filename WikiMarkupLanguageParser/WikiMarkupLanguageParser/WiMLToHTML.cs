@@ -17,7 +17,7 @@ namespace WikiMarkupLanguageParser
             html += $"<h1>{core.title}</h1>";
             if(core.Card is not null)
             {
-                html += $"<h3>{core.title}</h3><div class=\"card\">{childrenToHtml(core.Card)}</div>";
+                html += $"<div class=\"card\"><h3>{core.title}</h3>{childrenToHtml(core.Card)}</div>";
             }
             html += $"<div class=\"main\">{childrenToHtml(core.Body)}</div>";
             if (core.Source is not null)

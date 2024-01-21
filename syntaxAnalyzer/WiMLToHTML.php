@@ -54,7 +54,7 @@ class WiMLToHTML
         //$core->PrintAST();
         $html .= "<h1>{$core->title}</h1>";
         if ($core->Card !== null) {
-            $html .= "<h3>$core->title</h3><div class=\"card\">" . self::childrenToHtml($core->Card) . "</div>";
+            $html .= "<div class=\"card\"><h3>$core->title</h3>" . self::childrenToHtml($core->Card) . "</div>";
         }
         $html .= "<div class=\"main\">" . self::childrenToHtml($core->Body) . "</div>";
         if ($core->Source !== null) {
