@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -10,9 +9,9 @@ namespace WikiMarkupLanguageParser
 {
     internal class CoreElement
     {
-        public static List<string> singleTags = new List<string>() {"WiML","n","img","sl"};
-        public static List<string> notNullParam = new List<string>() {"pt"};
-        public static List<string> requireData = new List<string>() {"title", "card", "body", "source", "cs", "s", "bl", "nl", "l", "h", "d", "pt", "p", "li", "si", "b", "i"};
+        public static List<string> singleTags = new List<string>() { "WiML", "n", "img", "sl" };
+        public static List<string> notNullParam = new List<string>() { "pt" };
+        public static List<string> requireData = new List<string>() { "title", "card", "body", "source", "cs", "s", "bl", "nl", "l", "h", "d", "pt", "p", "li", "si", "b", "i" };
         public static Dictionary<string, Dictionary<string, string>> requiredTagsCount = new Dictionary<string, Dictionary<string, string>>() // 1 - required and no more than 1; ? - no more than 1; + - required;
         {
             {"core", new Dictionary<string, string>() { {"WiML", "1"}, {"title", "1"}, { "card", "?" }, {"body", "1"}, {"source", "?"} } },
@@ -83,14 +82,14 @@ namespace WikiMarkupLanguageParser
             else if (tagWithShortParam.IsMatch(tag))
             {
                 var t = tag.Substring(1, tag.Length - 1).Split('=', StringSplitOptions.RemoveEmptyEntries);
-                t[1]=t[1].Replace("]", "").Trim('/');
+                t[1] = t[1].Replace("]", "").Trim('/');
                 t[1] = t[1].Substring(0, t[1].Length);
                 elem = new Element(parent, coreElement, name, new string[] { t[1] }, data);
             }
             else if (tagWithParam.IsMatch(tag))
             {
-                
-                var t = tag.Substring(1, tag.Length - 1).Replace(name, "").Replace("]","").Trim('/').Split(" ", StringSplitOptions.RemoveEmptyEntries);
+
+                var t = tag.Substring(1, tag.Length - 1).Replace(name, "").Replace("]", "").Trim('/').Split(" ", StringSplitOptions.RemoveEmptyEntries);
                 elem = new Element(parent, coreElement, name, t, data);
             }
             else
@@ -141,19 +140,19 @@ namespace WikiMarkupLanguageParser
                 {
                     if (requiredTagsCount.ContainsKey(name))//check children elements
                     {
-                        foreach(var rule in requiredTagsCount[name])
+                        foreach (var rule in requiredTagsCount[name])
                         {
                             var count = elements.Count(x => x.Name == rule.Key);
                             switch (rule.Value)
                             {
                                 case "1":
-                                    if(count != 1)
+                                    if (count != 1)
                                     {
                                         throw new Exception($"only one {rule.Key} tag allowed in {name}");
                                     }
                                     break;
                                 case "?":
-                                    if(count > 1)
+                                    if (count > 1)
                                     {
                                         throw new Exception($"no more than one {rule.Key} tag allowed in {name}");
                                     }
@@ -184,7 +183,7 @@ namespace WikiMarkupLanguageParser
                 {
                     if (isText)
                     {
-                        elements.Add(new Element(parent, core, "text", null, data.Substring(textIndex, i - textIndex + 1)) {isProcessed = true});
+                        elements.Add(new Element(parent, core, "text", null, data.Substring(textIndex, i - textIndex + 1)) { isProcessed = true });
                     }
                 }
                 else
@@ -272,14 +271,14 @@ namespace WikiMarkupLanguageParser
             ProcessNode(node);
             foreach (var elem in node.Children)
             {
-                if(!elem.isProcessed)
-                ProcessTree(elem);
+                if (!elem.isProcessed)
+                    ProcessTree(elem);
             }
         }
         public static void PrintTree(Element node)
         {
             Console.WriteLine(node);
-            foreach(var elem in node.Children)
+            foreach (var elem in node.Children)
             {
                 PrintTree(elem);
             }
@@ -291,11 +290,11 @@ namespace WikiMarkupLanguageParser
             Body = el.First(x => x.Name == "body");
             Card = el.FirstOrDefault(x => x.Name == "card");
             Source = el.FirstOrDefault(x => x.Name == "source");
-            if(Source is not null)
+            if (Source is not null)
             {
                 ProcessTree(Source);
             }
-            if(Card is not null)
+            if (Card is not null)
             {
                 ProcessTree(Card);
             }
@@ -304,6 +303,7 @@ namespace WikiMarkupLanguageParser
         }
         public void PrintAST()
         {
+            Console.WriteLine(title);
             if (Card is not null)
             {
                 PrintTree(Card);
